@@ -9,7 +9,7 @@ import { Prec } from "@codemirror/state";
 import { openscadLanguage } from "./scadLanguage";
 import { useCompiler } from "./useCompiler";
 import { DEFAULT_FILE, loadWorkspace, normalizeFilename, saveActive, saveFiles } from "@/lib/storage";
-import { EXAMPLES } from "@/lib/examples";
+import { EXAMPLES, findExample } from "@/lib/examples";
 import { downloadBlob, toBinaryStl, toObj } from "@/lib/export/exporters";
 
 const Viewer = dynamic(() => import("./Viewer"), { ssr: false });
@@ -29,6 +29,8 @@ export default function WebScadApp() {
 
   const { compile, result, busy } = useCompiler();
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // when true, the next compile result should re-frame the camera
+  const pendingFrame = useRef(true);
   const filesRef = useRef(workspace.files);
   const activeRef = useRef(workspace.active);
   useEffect(() => {
@@ -45,6 +47,14 @@ export default function WebScadApp() {
     compile(workspace.files[workspace.active] ?? "", workspace.files);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // re-frame the camera once the compile a file-switch/example-load triggered lands
+  useEffect(() => {
+    if (result && result.ok && pendingFrame.current) {
+      pendingFrame.current = false;
+      setFrameToken((t) => t + 1);
+    }
+  }, [result]);
 
   // persist to localStorage
   useEffect(() => {
@@ -72,8 +82,8 @@ export default function WebScadApp() {
   // file management
   const selectFile = (name: string) => {
     setActive(name);
+    pendingFrame.current = true;
     compile(filesRef.current[name] ?? "", filesRef.current);
-    setFrameToken((t) => t + 1);
   };
 
   const newFile = () => {
@@ -112,14 +122,14 @@ export default function WebScadApp() {
 
   const loadExample = (name: string) => {
     if (!name) return;
-    const code = EXAMPLES[name];
+    const code = findExample(name);
     if (!code) return;
     const fileName = normalizeFilename(name.toLowerCase().replace(/[^a-z0-9]+/g, "-"));
     setFiles((prev) => ({ ...prev, [fileName]: code }));
     setActive(fileName);
+    pendingFrame.current = true;
     setTimeout(() => {
       compile(code, { ...filesRef.current, [fileName]: code });
-      setFrameToken((t) => t + 1);
     }, 0);
   };
 
@@ -134,9 +144,9 @@ export default function WebScadApp() {
       const name = normalizeFilename(f.name);
       setFiles((prev) => ({ ...prev, [name]: text }));
       setActive(name);
+      pendingFrame.current = true;
       setTimeout(() => {
         compile(text, { ...filesRef.current, [name]: text });
-        setFrameToken((t) => t + 1);
       }, 0);
     };
     input.click();
@@ -216,8 +226,12 @@ export default function WebScadApp() {
         <div className="toolbar-group">
           <select className="select" value="" onChange={(e) => loadExample(e.target.value)} title="Load an example">
             <option value="" disabled>Examples…</option>
-            {Object.keys(EXAMPLES).map((name) => (
-              <option key={name} value={name}>{name}</option>
+            {Object.entries(EXAMPLES).map(([group, items]) => (
+              <optgroup key={group} label={group}>
+                {Object.keys(items).map((name) => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </div>

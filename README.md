@@ -27,7 +27,7 @@
   - WebGL viewer with orbit controls, Z-up grid, auto-framing
   - Workspace persisted to **localStorage** with multiple files, auto-save, import of local `.scad` files
   - Export **binary STL**, **OBJ**, or the `.scad` source — all generated client-side
-  - Bundled examples: CSG demo, parametric gear, twisted vase, recursive tree, and more
+  - 25 bundled examples in four difficulty tiers (Basics → Intermediate → Advanced → Showcase), from a primitives tour up to a computed involute gear, fractals, and a printable two-part project enclosure
 
 ## Getting started
 

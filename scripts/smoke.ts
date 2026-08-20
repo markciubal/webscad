@@ -71,9 +71,11 @@ check("resize", "resize([10, 4, 2]) cube(1);", true);
   console.log(`${ok ? "PASS" : "FAIL"}  include-virtual-file           tris=${r.stats.triangles}`);
 }
 
-// all bundled examples must compile
-for (const [name, src] of Object.entries(EXAMPLES)) {
-  check(`example: ${name}`, src, true);
+// all bundled examples must compile, in every group
+for (const [group, items] of Object.entries(EXAMPLES)) {
+  for (const [name, src] of Object.entries(items)) {
+    check(`${group}: ${name}`, src, true);
+  }
 }
 
 console.log(failures === 0 ? "\nAll smoke tests passed." : `\n${failures} smoke test(s) FAILED.`);

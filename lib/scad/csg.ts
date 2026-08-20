@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { Brush, Evaluator as CsgEvaluator, ADDITION, SUBTRACTION, INTERSECTION } from "three-bvh-csg";
 import { ConvexGeometry } from "three/examples/jsm/geometries/ConvexGeometry.js";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { SceneNode } from "./types";
 import {
   collect2dContours, cubeGeometry, cylinderGeometry, linearExtrudeGeometry,
@@ -242,7 +243,12 @@ function applyResize(specs: MeshSpec[], newsize: [number, number, number], auto:
   return specs;
 }
 
-/** CSG-union a list of specs into a single spec (needed as a boolean operand). */
+/**
+ * CSG-union a list of specs into a single spec (needed as a boolean operand).
+ * Solids whose bounding boxes overlap are truly CSG-unioned; disjoint solids
+ * are simply concatenated, which is dramatically faster for the common
+ * "subtract a grid of holes" pattern.
+ */
 function csgMerge(specs: MeshSpec[], warn: (m: string) => void): MeshSpec | null {
   const valid = specs.filter((s) => {
     const p = s.geometry.attributes.position;
@@ -250,13 +256,43 @@ function csgMerge(specs: MeshSpec[], warn: (m: string) => void): MeshSpec | null
   });
   if (valid.length === 0) return null;
   if (valid.length === 1) return valid[0];
-  let acc = valid[0];
-  for (let i = 1; i < valid.length; i++) {
-    const r = csgOp(acc, valid[i], ADDITION, warn);
-    if (!r) return acc;
-    acc = r;
+
+  interface Entry {
+    spec: MeshSpec;
+    box: THREE.Box3;
   }
-  return acc;
+  const entries: Entry[] = [];
+  for (const s of valid) {
+    s.geometry.computeBoundingBox();
+    let cur: Entry = { spec: s, box: s.geometry.boundingBox!.clone() };
+    // CSG-combine with every existing entry it overlaps (box may grow, so loop)
+    for (;;) {
+      const idx = entries.findIndex((e) => e.box.intersectsBox(cur.box));
+      if (idx === -1) break;
+      const [other] = entries.splice(idx, 1);
+      const merged = csgOp(other.spec, cur.spec, ADDITION, warn) ?? other.spec;
+      cur = { spec: merged, box: other.box.union(cur.box) };
+    }
+    entries.push(cur);
+  }
+
+  if (entries.length === 1) return entries[0].spec;
+
+  // disjoint shells: concatenate raw triangle data
+  const geoms = entries.map((e) =>
+    e.spec.geometry.index ? e.spec.geometry.toNonIndexed() : e.spec.geometry,
+  );
+  const g = mergeGeometries(geoms, false);
+  if (!g) {
+    warn("Geometry merge failed; using first solid only");
+    return entries[0].spec;
+  }
+  return {
+    geometry: g,
+    color: entries.find((e) => e.spec.color)?.spec.color ?? null,
+    highlight: entries.some((e) => e.spec.highlight),
+    background: false,
+  };
 }
 
 function csgOp(a: MeshSpec, b: MeshSpec, op: number, warn: (m: string) => void): MeshSpec | null {
