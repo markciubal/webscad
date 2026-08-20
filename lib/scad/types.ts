@@ -95,6 +95,9 @@ export type Stmt =
 export type Vec3 = [number, number, number];
 export type Mat4 = number[]; // 16 numbers, column-major (three.js order)
 
+/** How align() positions the children's bounding box on one axis. */
+export type AlignMode = "min" | "center" | "max" | null;
+
 /** Resolved fragment count helper params carried on primitives. */
 export interface Contour {
   points: [number, number][];
@@ -117,6 +120,7 @@ export type SceneNode =
   | { type: "intersection"; children: SceneNode[] }
   | { type: "hull"; children: SceneNode[] }
   | { type: "minkowski"; children: SceneNode[] }
+  | { type: "align"; x: AlignMode; y: AlignMode; z: AlignMode; children: SceneNode[] }
   | { type: "highlight"; children: SceneNode[] }
   | { type: "background"; children: SceneNode[] };
 

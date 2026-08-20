@@ -306,6 +306,28 @@ export function collect2dContours(node: SceneNode, warn: (m: string) => void): C
     case "highlight":
     case "background":
       return node.children.flatMap((c) => collect2dContours(c, warn));
+    case "align": {
+      const inner = node.children.flatMap((c) => collect2dContours(c, warn));
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      for (const c of inner) {
+        for (const [x, y] of c.points) {
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+      }
+      if (!isFinite(minX)) return inner;
+      const offsetFor = (mode: string | null, min: number, max: number) =>
+        mode === "min" ? -min : mode === "max" ? -max : mode === "center" ? -(min + max) / 2 : 0;
+      const ox = offsetFor(node.x, minX, maxX);
+      const oy = offsetFor(node.y, minY, maxY);
+      if (ox === 0 && oy === 0) return inner;
+      return inner.map((c) => ({
+        hole: c.hole,
+        points: c.points.map(([x, y]) => [x + ox, y + oy] as [number, number]),
+      }));
+    }
     case "linear_extrude":
     case "rotate_extrude":
     case "cube":

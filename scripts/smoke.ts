@@ -1,6 +1,7 @@
 /* End-to-end smoke test: parse → evaluate → CSG → triangle buffers, headless. */
 import { compileSource } from "../lib/scad/compile";
 import { EXAMPLES } from "../lib/examples";
+import { PLUGINS } from "../lib/plugins";
 
 let failures = 0;
 
@@ -69,6 +70,36 @@ check("resize", "resize([10, 4, 2]) cube(1);", true);
   const ok = r.ok && r.stats.triangles === 12;
   if (!ok) failures++;
   console.log(`${ok ? "PASS" : "FAIL"}  include-virtual-file           tris=${r.stats.triangles}`);
+}
+
+// align() extension: verify the bounding box actually lands where requested
+{
+  const r = compileSource('align(x = "min", y = "center", z = "max") translate([13, 7, -4]) cube([6, 4, 10]);');
+  let minX = Infinity, minY = Infinity, maxY = -Infinity, maxZ = -Infinity;
+  for (const m of r.meshes) {
+    for (let i = 0; i < m.positions.length; i += 3) {
+      minX = Math.min(minX, m.positions[i]);
+      minY = Math.min(minY, m.positions[i + 1]);
+      maxY = Math.max(maxY, m.positions[i + 1]);
+      maxZ = Math.max(maxZ, m.positions[i + 2]);
+    }
+  }
+  const ok = r.ok
+    && Math.abs(minX) < 1e-5          // x = "min"  → box starts at 0
+    && Math.abs(minY + maxY) < 1e-5   // y = "center" → symmetric about 0
+    && Math.abs(maxZ) < 1e-5;         // z = "max"  → box ends at 0
+  if (!ok) failures++;
+  console.log(`${ok ? "PASS" : "FAIL"}   align() bbox                     minX=${minX.toFixed(4)} midY=${((minY + maxY) / 2).toFixed(4)} maxZ=${maxZ.toFixed(4)}`);
+}
+
+// 2D align inside an extrusion
+check("align 2D", 'linear_extrude(4) align(x = "center", y = "min") translate([20, 30]) circle(6, $fn = 24);', true);
+
+// every tool plugin's generated + preview code must compile
+for (const p of PLUGINS) {
+  const defaults = Object.fromEntries(p.params.map((pp) => [pp.key, pp.default]));
+  check(`plugin gen: ${p.id}`, p.generate(defaults), true);
+  check(`plugin preview: ${p.id}`, p.preview(defaults), true);
 }
 
 // all bundled examples must compile, in every group

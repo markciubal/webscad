@@ -269,6 +269,169 @@ body {
   color: var(--warn);
 }
 
+/* ---------- tool plugin dialog ---------- */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 10, 14, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal-panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  width: min(920px, 94vw);
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.5);
+}
+
+.modal-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-title {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.modal-blurb {
+  color: var(--text-muted);
+  font-size: 12.5px;
+  margin-top: 2px;
+  max-width: 640px;
+}
+
+.modal-close {
+  margin-left: auto;
+}
+
+.modal-body {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 0;
+  min-height: 0;
+  flex: 1;
+}
+
+.modal-params {
+  padding: 12px 16px;
+  overflow-y: auto;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.param-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.param-label {
+  flex: 0 0 128px;
+  color: var(--text);
+}
+
+.param-inputs {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 1;
+  min-width: 0;
+}
+
+.param-inputs input[type="range"] {
+  flex: 1;
+  min-width: 40px;
+  accent-color: var(--primary);
+}
+
+.param-number {
+  width: 62px;
+  background: var(--bg-raised);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 3px 6px;
+  font-size: 12.5px;
+}
+
+.param-select {
+  flex: 1;
+}
+
+.code-toggle {
+  margin-top: 6px;
+  align-self: flex-start;
+}
+
+.code-preview {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px;
+  font-size: 11px;
+  line-height: 1.45;
+  overflow: auto;
+  max-height: 220px;
+  white-space: pre;
+}
+
+.modal-preview {
+  position: relative;
+  min-height: 380px;
+}
+
+.preview-error {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  right: 10px;
+  color: var(--error);
+  background: rgba(20, 23, 28, 0.85);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-family: Consolas, monospace;
+  font-size: 12px;
+}
+
+.preview-busy {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.modal-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+}
+
+.modal-hint {
+  margin-right: auto;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
 /* ---------- boot screen ---------- */
 
 .boot-screen {

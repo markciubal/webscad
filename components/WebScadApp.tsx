@@ -2,14 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import CodeMirror from "@uiw/react-codemirror";
+import CodeMirror, { ReactCodeMirrorRef } from "@uiw/react-codemirror";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { keymap } from "@codemirror/view";
 import { Prec } from "@codemirror/state";
 import { openscadLanguage } from "./scadLanguage";
 import { useCompiler } from "./useCompiler";
+import PluginDialog from "./PluginDialog";
 import { DEFAULT_FILE, loadWorkspace, normalizeFilename, saveActive, saveFiles } from "@/lib/storage";
 import { EXAMPLES, findExample } from "@/lib/examples";
+import { PLUGINS, findPlugin } from "@/lib/plugins";
 import { downloadBlob, toBinaryStl, toObj } from "@/lib/export/exporters";
 
 const Viewer = dynamic(() => import("./Viewer"), { ssr: false });
@@ -26,6 +28,8 @@ export default function WebScadApp() {
   const [frameToken, setFrameToken] = useState(0);
   const [consoleOpen, setConsoleOpen] = useState(true);
   const [editorWidth, setEditorWidth] = useState(46); // percent
+  const [activePluginId, setActivePluginId] = useState<string | null>(null);
+  const cmRef = useRef<ReactCodeMirrorRef>(null);
 
   const { compile, result, busy } = useCompiler();
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -152,6 +156,24 @@ export default function WebScadApp() {
     input.click();
   };
 
+  // tool plugins: insert generated code at the cursor's line end
+  const insertPluginCode = (code: string) => {
+    const snippet = "\n" + code.trim() + "\n";
+    const view = cmRef.current?.view;
+    if (view) {
+      const line = view.state.doc.lineAt(view.state.selection.main.head);
+      view.dispatch({
+        changes: { from: line.to, insert: snippet },
+        selection: { anchor: line.to + snippet.length },
+        scrollIntoView: true,
+      });
+      view.focus();
+    } else {
+      onSourceChange(source + snippet);
+    }
+    setActivePluginId(null);
+  };
+
   // exports
   const meshes = useMemo(() => result?.meshes ?? [], [result]);
   const canExport = result?.ok && meshes.some((m) => !m.background);
@@ -224,6 +246,17 @@ export default function WebScadApp() {
         </div>
 
         <div className="toolbar-group">
+          <select
+            className="select"
+            value=""
+            onChange={(e) => setActivePluginId(e.target.value || null)}
+            title="Code-generating tools: configure in a dialog, insert into the editor"
+          >
+            <option value="" disabled>Tools…</option>
+            {PLUGINS.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
           <select className="select" value="" onChange={(e) => loadExample(e.target.value)} title="Load an example">
             <option value="" disabled>Examples…</option>
             {Object.entries(EXAMPLES).map(([group, items]) => (
@@ -257,6 +290,7 @@ export default function WebScadApp() {
       <main className="main" style={{ gridTemplateColumns: `${editorWidth}% 6px 1fr` }}>
         <section className="editor-pane">
           <CodeMirror
+            ref={cmRef}
             value={source}
             onChange={onSourceChange}
             theme={oneDark}
@@ -320,6 +354,18 @@ export default function WebScadApp() {
           </div>
         )}
       </section>
+
+      {activePluginId && (() => {
+        const plugin = findPlugin(activePluginId);
+        if (!plugin) return null;
+        return (
+          <PluginDialog
+            plugin={plugin}
+            onInsert={insertPluginCode}
+            onClose={() => setActivePluginId(null)}
+          />
+        );
+      })()}
     </div>
   );
 }

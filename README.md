@@ -21,6 +21,13 @@
   - Booleans: `union`, `difference`, `intersection`, plus `hull()` (3D convex hull and 2D)
   - Transforms: `translate`, `rotate` (Euler & axis-angle), `scale`, `mirror`, `multmatrix`, `resize`, `color` (names / hex / rgba)
   - Modifiers: `*` disable, `!` root, `#` highlight, `%` background
+- **Toolbar tools (plugins)** — the *Tools…* menu opens parameter dialogs with a live 3D preview that insert generated OpenSCAD into your editor:
+  - **Gear builder** — involute spur gear (module, teeth, pressure angle, bore, hub, helix, lightening holes)
+  - **Polar array** / **Grid array** — distribute your shapes on a circle, helix, or 1D/2D/3D grid (generated wrapper modules using `children()`)
+  - **Surface scatter** — distribute shapes over another object's surface (Fibonacci sphere, oriented along the normal)
+  - **Mirror copy** — original + mirrored twin
+  - **Align to origin** — powered by `align()`, a WebSCAD language extension (`align(x = "min"|"center"|"max", y = …, z = …)`) that positions a subtree's bounding box relative to the origin — impossible in plain OpenSCAD, which cannot measure its children
+  - Plugins are declared in [lib/plugins/index.ts](lib/plugins/index.ts) — adding one is a parameter list plus a code template
 - **Modern web app** — Next.js (App Router) + TypeScript
   - CodeMirror 6 editor with OpenSCAD syntax highlighting and autocompletion
   - Geometry compiles in a **Web Worker** (main-thread fallback), so the UI never freezes; hung renders time out and recover

@@ -16,6 +16,7 @@ const BUILTIN_MODULES = [
   "mirror", "multmatrix", "resize", "color", "union", "difference",
   "intersection", "hull", "minkowski", "offset", "projection", "render",
   "children", "import", "surface",
+  "align", // WebSCAD extension
 ];
 
 const BUILTIN_FUNCTIONS = [

@@ -1,6 +1,6 @@
 ﻿import { parse } from "./parser";
 import {
-  Arg, Assign, Contour, EvalOutput, Expr, LcElement, Param, Pos,
+  AlignMode, Arg, Assign, Contour, EvalOutput, Expr, LcElement, Param, Pos,
   RangeValue, ScadError, SceneNode, Stmt, Value, Vec3,
   fmtValue, isRange, iterateRange,
 } from "./types";
@@ -357,6 +357,23 @@ export class Evaluator {
         const a = this.namedArgs(args, scope, ["c", "alpha"]);
         const rgba = parseColor(a.c ?? a._p[0], num(a.alpha ?? a._p[1], 1), (m) => this.warn(m, pos));
         return [{ type: "color", color: rgba, children: evalChildren() }];
+      }
+
+      // ---- WebSCAD extension: bounding-box alignment ----
+      case "align": {
+        const a = this.namedArgs(args, scope, ["x", "y", "z"]);
+        const mode = (v: Value): AlignMode => {
+          if (v === "min" || v === "center" || v === "max") return v;
+          if (v !== undefined) this.warn(`align(): expected "min", "center" or "max"`, pos);
+          return null;
+        };
+        return [{
+          type: "align",
+          x: mode(a.x ?? a._p[0]),
+          y: mode(a.y ?? a._p[1]),
+          z: mode(a.z ?? a._p[2]),
+          children: evalChildren(),
+        }];
       }
 
       // ---- booleans ----

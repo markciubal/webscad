@@ -182,6 +182,35 @@ function compileNode(node: SceneNode, warn: (m: string) => void): MeshSpec[] {
     case "minkowski":
       // evaluator already downgraded minkowski → union + warning
       return compileChildren(node.children, warn);
+
+    case "align": {
+      // WebSCAD extension: translate children so their bounding box sits at
+      // min/center/max = 0 on each requested axis
+      const specs = compileChildren(node.children, warn);
+      const solid = specs.filter((s) => !s.background);
+      if (solid.length === 0) return specs;
+      const bbox = new THREE.Box3();
+      for (const s of solid) {
+        s.geometry.computeBoundingBox();
+        if (s.geometry.boundingBox) bbox.union(s.geometry.boundingBox);
+      }
+      const offsetFor = (mode: "min" | "center" | "max" | null, min: number, max: number): number => {
+        if (mode === "min") return -min;
+        if (mode === "max") return -max;
+        if (mode === "center") return -(min + max) / 2;
+        return 0;
+      };
+      const off = new THREE.Vector3(
+        offsetFor(node.x, bbox.min.x, bbox.max.x),
+        offsetFor(node.y, bbox.min.y, bbox.max.y),
+        offsetFor(node.z, bbox.min.z, bbox.max.z),
+      );
+      if (off.lengthSq() > 0) {
+        const m = new THREE.Matrix4().makeTranslation(off.x, off.y, off.z);
+        for (const s of specs) s.geometry.applyMatrix4(m);
+      }
+      return specs;
+    }
   }
 }
 
